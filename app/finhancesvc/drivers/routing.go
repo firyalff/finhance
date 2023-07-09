@@ -21,6 +21,8 @@ type AppRoute struct {
 
 func InitRouting() (router *gin.Engine) {
 	router = gin.Default()
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
 	return router
 }
 
