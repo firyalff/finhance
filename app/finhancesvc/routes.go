@@ -12,6 +12,6 @@ func RegisterRoutes(router *gin.Engine) {
 
 func getVersionHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
-		"version": appVersion,
+		"version": AppVersion,
 	})
 }
