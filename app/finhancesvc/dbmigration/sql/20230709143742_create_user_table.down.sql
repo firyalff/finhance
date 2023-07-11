@@ -1,0 +1,11 @@
+BEGIN;
+
+DROP TABLE user_reset_password_attempts CASCADE;
+
+DROP TABLE users CASCADE;
+
+DROP TYPE USER_STATUS_ENUM CASCADE;
+
+DROP EXTENSION IF EXISTS "uuid-ossp";
+
+COMMIT;
