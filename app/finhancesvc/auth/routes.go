@@ -2,7 +2,7 @@ package auth
 
 import (
 	"finhancesvc/shared"
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,13 +31,13 @@ func (authModule AuthModule) loginHandler(ctx *gin.Context) {
 
 	userRecord, err := getUserByEmail(ctx, payload.Email)
 	if err != nil {
-		errBody := shared.GenerateErrorResponse("INTERNAL_ERR", nil)
-		httpCode := http.StatusInternalServerError
-		if err == pgx.ErrNoRows {
-			errBody = shared.GenerateErrorResponse("UNAUTHORIZED", nil)
-			httpCode = http.StatusUnauthorized
+		errBody := shared.GenerateErrorResponse("UNAUTHORIZED", nil)
+		httpCode := http.StatusUnauthorized
+		if err != pgx.ErrNoRows {
+			errBody = shared.GenerateErrorResponse("INTERNAL_ERR", nil)
+			httpCode = http.StatusInternalServerError
+			log.Print(err)
 		}
-		fmt.Println(err)
 
 		ctx.JSON(httpCode, errBody)
 		return
@@ -45,16 +45,14 @@ func (authModule AuthModule) loginHandler(ctx *gin.Context) {
 
 	err = validateUserPassword(payload.Password, userRecord.Password)
 	if err != nil {
-		fmt.Println(err)
-
+		log.Print(err)
 		ctx.JSON(http.StatusUnauthorized, shared.GenerateErrorResponse("UNAUTHORIZED", nil))
 		return
 	}
 
 	tokenString, err := generateJWT(userRecord.Id.String(), authModule.serverConfig.JWTSecret, authModule.serverConfig.JWTExpireDayCount)
 	if err != nil {
-		fmt.Println(err)
-
+		log.Print(err)
 		ctx.JSON(http.StatusUnauthorized, shared.GenerateErrorResponse("UNAUTHORIZED", nil))
 		return
 	}
