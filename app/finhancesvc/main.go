@@ -30,6 +30,8 @@ func main() {
 			panic(err)
 		}
 
+		defer DBPool.Close()
+
 		auth.InitModule(DBPool, *cfg)
 
 		router := drivers.InitRouting()
