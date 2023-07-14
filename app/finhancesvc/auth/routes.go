@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 )
 
 func RegisterRoutes(router *gin.Engine) {
@@ -29,36 +28,59 @@ func (authModule AuthModule) loginHandler(ctx *gin.Context) {
 		return
 	}
 
-	userRecord, err := getUserByEmail(ctx, payload.Email)
+	userRecord, err := getUserByCredentials(ctx, payload)
 	if err != nil {
-		errBody := shared.GenerateErrorResponse("UNAUTHORIZED", nil)
-		httpCode := http.StatusUnauthorized
-		if err != pgx.ErrNoRows {
-			errBody = shared.GenerateErrorResponse("INTERNAL_ERR", nil)
-			httpCode = http.StatusInternalServerError
-			log.Print(err)
+		if err == shared.ErrNotFound || err == shared.ErrUnauthorized {
+			ctx.JSON(http.StatusUnauthorized, shared.GenerateErrorResponse("UNAUTHORIZED", nil))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
 		}
-
-		ctx.JSON(httpCode, errBody)
 		return
 	}
 
-	err = validateUserPassword(payload.Password, userRecord.Password)
+	tokenString, err := generateAthenticationToken(userRecord.Id.String(), authModule.serverConfig.JWTSecret, authModule.serverConfig.JWTExpireDayCount)
 	if err != nil {
-		log.Print(err)
-		ctx.JSON(http.StatusUnauthorized, shared.GenerateErrorResponse("UNAUTHORIZED", nil))
-		return
-	}
-
-	tokenString, err := generateJWT(userRecord.Id.String(), authModule.serverConfig.JWTSecret, authModule.serverConfig.JWTExpireDayCount)
-	if err != nil {
-		log.Print(err)
-		ctx.JSON(http.StatusUnauthorized, shared.GenerateErrorResponse("UNAUTHORIZED", nil))
+		ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
 		return
 	}
 
 	ctx.JSON(200, gin.H{
+		"token": tokenString,
+	})
+}
+
+type registerValidation struct {
+	FirstName            string
+	LastName             string
+	Email                string `json:"email" validate:"required,email"`
+	Password             string `json:"password" validate:"required,min=8,max=64"`
+	PasswordConfirmation string `json:"password_confirmation" validate:"required,min=8,max=64"`
+}
+
+func (authModule AuthModule) registerHandler(ctx *gin.Context) {
+	var payload registerValidation
+	ctx.Bind(&payload)
+
+	err := shared.Validator().Struct(payload)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("BAD_REQ", shared.ParseValidatorError(err))
+		ctx.JSON(400, errBody)
+		return
+	}
+
+	totalUser, err := countUserByEmail(ctx, payload.Email)
+	if err != nil {
+		log.Print(err)
+		ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNAL_ERR", nil))
+		return
+	}
+
+	if totalUser > 0 {
+		ctx.JSON(http.StatusConflict, shared.GenerateErrorResponse("RESOURCE_EXIST", nil))
+		return
+	}
+
+	ctx.JSON(201, gin.H{
 		"message": "OK",
-		"token":   tokenString,
 	})
 }
