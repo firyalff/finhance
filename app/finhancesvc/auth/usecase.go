@@ -84,3 +84,34 @@ func registerNewUser(ctx context.Context, registrationRecord registerPayload, ba
 
 	return
 }
+
+func activateAccount(ctx context.Context, activationToken string) (err error) {
+	tx, err := authModuleInstance.dbPool.Begin(ctx)
+	if err != nil {
+		log.Print(err)
+		return shared.ErrInternal
+	}
+
+	totalFound, err := countUserActivation(ctx, tx, activationToken)
+	if err != nil {
+		err = shared.ErrInternal
+	}
+
+	if totalFound < 1 {
+		return shared.ErrNotFound
+	}
+
+	err = activateAccountWithActivationToken(ctx, tx, activationToken)
+	if err != nil {
+		err = shared.ErrInternal
+	}
+
+	err = deleteActivationToken(ctx, tx, activationToken)
+	if err != nil {
+		err = shared.ErrInternal
+	}
+
+	tx.Commit(ctx)
+
+	return
+}

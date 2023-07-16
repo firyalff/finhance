@@ -10,6 +10,7 @@ import (
 func RegisterRoutes(router *gin.Engine) {
 	router.POST("/login", authModuleInstance.loginHandler)
 	router.POST("/register", authModuleInstance.registerHandler)
+	router.GET("/account-activation", authModuleInstance.accountActivationHandler)
 }
 
 type loginPayload struct {
@@ -94,6 +95,41 @@ func (authModule AuthModule) registerHandler(ctx *gin.Context) {
 	}
 
 	ctx.JSON(201, gin.H{
+		"message": "OK",
+	})
+	return
+}
+
+type accountActivationPayload struct {
+	ActivationToken string `form:"activation_token" validate:"required"`
+}
+
+func (authModule AuthModule) accountActivationHandler(ctx *gin.Context) {
+	var payload accountActivationPayload
+
+	ctx.BindQuery(&payload)
+
+	err := shared.Validator().Struct(payload)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("BAD_REQ", shared.ParseValidatorError(err))
+		ctx.JSON(400, errBody)
+		return
+	}
+
+	err = activateAccount(ctx, payload.ActivationToken)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("INTERNALERR", err)
+		httpStatus := http.StatusInternalServerError
+		if err == shared.ErrNotFound {
+			errBody = shared.GenerateErrorResponse("NOT_FOUND", err)
+			httpStatus = http.StatusNotFound
+		}
+		ctx.JSON(httpStatus, errBody)
+
+		return
+	}
+
+	ctx.JSON(200, gin.H{
 		"message": "OK",
 	})
 	return

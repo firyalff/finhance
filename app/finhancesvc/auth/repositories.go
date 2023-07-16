@@ -23,6 +23,12 @@ type userDB struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
+const (
+	USERSTATUS_ACTIVE            string = "active"
+	USERSTATUS_INACTIVE          string = "inactive"
+	USERSTATUS_NEED_VERIFICATION string = "need_verification"
+)
+
 func getUserByEmail(ctx context.Context, email string) (user userDB, err error) {
 	query := "SELECT * FROM users WHERE email=$1"
 	row := authModuleInstance.dbPool.QueryRow(ctx, query, email)
@@ -107,4 +113,41 @@ func createUserActivation(ctx context.Context, tx pgx.Tx, userID string) (activa
 	}
 
 	return activationToken, err
+}
+
+type userActivationDB struct {
+	userId          uuid.UUID
+	activationToken uuid.UUID
+	ExpiredAt       pgtype.Timestamptz
+}
+
+func countUserActivation(ctx context.Context, tx pgx.Tx, activationToken string) (totalRow int, err error) {
+	query := `SELECT count(activation_token) from user_activations WHERE activation_token=$1 AND expired_at >= CURRENT_TIMESTAMP`
+	row := tx.QueryRow(ctx, query, activationToken)
+	err = row.Scan(&totalRow)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return
+}
+
+func activateAccountWithActivationToken(ctx context.Context, tx pgx.Tx, activationToken string) (err error) {
+	query := `UPDATE users SET status= $1 FROM user_activations WHERE id = user_activations.user_id AND user_activations.activation_token = $2`
+	_, err = tx.Exec(ctx, query, USERSTATUS_ACTIVE, activationToken)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return
+}
+
+func deleteActivationToken(ctx context.Context, tx pgx.Tx, activationToken string) (err error) {
+	query := `DELETE FROM user_activations WHERE activation_token = $1`
+	_, err = tx.Exec(ctx, query, activationToken)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return
 }
