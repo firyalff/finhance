@@ -65,19 +65,46 @@ func countUserByEmail(ctx context.Context, email string) (totalRow int, err erro
 	return
 }
 
-func createUser(ctx context.Context, registrationRecord registerValidation) (err error) {
-	userID, err := uuid.NewV7()
+func createUser(ctx context.Context, tx pgx.Tx, registrationRecord registerPayload) (userID string, err error) {
+	userIDUUID, err := uuid.NewV7()
 	if err != nil {
-		return err
+		log.Print(err)
+		return "", err
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(registrationRecord.Password), 8)
 	if err != nil {
-		return err
+		log.Print(err)
+		return "", err
 	}
 
 	query := `INSERT INTO users(id, first_name, last_name, email, password) VALUES ($1, $2, $3, $4, $5)`
-	_, err = authModuleInstance.dbPool.Exec(ctx, query, userID.String(), registrationRecord.FirstName, registrationRecord.LastName, registrationRecord.Email, hashedPassword)
+	_, err = tx.Exec(ctx, query, userIDUUID.String(), registrationRecord.FirstName, registrationRecord.LastName, registrationRecord.Email, hashedPassword)
+	if err != nil {
+		log.Print(err)
+	}
 
-	return
+	return userIDUUID.String(), err
+}
+
+func createUserActivation(ctx context.Context, tx pgx.Tx, userID string) (activationToken string, err error) {
+	const dayToExpire = 2
+
+	activationTokenUUID, err := uuid.NewV7()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	activationToken = activationTokenUUID.String()
+
+	expireAt := time.Now().AddDate(0, 0, dayToExpire)
+
+	query := `INSERT INTO user_activations(activation_token, user_id, expired_at) VALUES ($1, $2, $3)`
+	_, err = tx.Exec(ctx, query, activationToken, userID, expireAt)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return activationToken, err
 }

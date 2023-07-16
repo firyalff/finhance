@@ -28,8 +28,10 @@ type ErrorResponse struct {
 }
 
 func GenerateErrorResponse(errorCode string, errorDetails interface{}) ErrorResponse {
+
 	return ErrorResponse{
 		ErrorCode: errorCode,
 		Details:   errorDetails,
 	}
+
 }

@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY IF NOT EXISTS user_activation_token_idx on user_activations(activation_token);

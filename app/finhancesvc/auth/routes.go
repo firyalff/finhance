@@ -2,7 +2,6 @@ package auth
 
 import (
 	"finhancesvc/shared"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,15 +9,16 @@ import (
 
 func RegisterRoutes(router *gin.Engine) {
 	router.POST("/login", authModuleInstance.loginHandler)
+	router.POST("/register", authModuleInstance.registerHandler)
 }
 
-type loginValidation struct {
+type loginPayload struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8,max=64"`
 }
 
 func (authModule AuthModule) loginHandler(ctx *gin.Context) {
-	var payload loginValidation
+	var payload loginPayload
 	ctx.Bind(&payload)
 
 	err := shared.Validator().Struct(payload)
@@ -49,16 +49,16 @@ func (authModule AuthModule) loginHandler(ctx *gin.Context) {
 	})
 }
 
-type registerValidation struct {
-	FirstName            string
-	LastName             string
+type registerPayload struct {
+	FirstName            string `json:"first_name" validate:"required"`
+	LastName             string `json:"last_name" validate:"required"`
 	Email                string `json:"email" validate:"required,email"`
 	Password             string `json:"password" validate:"required,min=8,max=64"`
-	PasswordConfirmation string `json:"password_confirmation" validate:"required,min=8,max=64"`
+	PasswordConfirmation string `json:"password_confirmation" validate:"required,min=8,max=64,eqfield=Password"`
 }
 
 func (authModule AuthModule) registerHandler(ctx *gin.Context) {
-	var payload registerValidation
+	var payload registerPayload
 	ctx.Bind(&payload)
 
 	err := shared.Validator().Struct(payload)
@@ -68,19 +68,33 @@ func (authModule AuthModule) registerHandler(ctx *gin.Context) {
 		return
 	}
 
-	totalUser, err := countUserByEmail(ctx, payload.Email)
+	err = validateUniqueEmailRegistration(ctx, payload.Email)
 	if err != nil {
-		log.Print(err)
-		ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNAL_ERR", nil))
+		errBody := shared.GenerateErrorResponse("INTERNALERR", err)
+		httpCode := http.StatusInternalServerError
+		if err == shared.ErrExist {
+			errBody = shared.GenerateErrorResponse("RESOURCE_EXIST", err)
+			httpCode = http.StatusConflict
+		}
+
+		ctx.JSON(httpCode, errBody)
 		return
 	}
 
-	if totalUser > 0 {
-		ctx.JSON(http.StatusConflict, shared.GenerateErrorResponse("RESOURCE_EXIST", nil))
+	scheme := "http"
+	if ctx.Request.TLS != nil {
+		scheme = "https"
+	}
+
+	err = registerNewUser(ctx, payload, scheme+"://"+ctx.Request.Host)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("INTERNALERR", err)
+		ctx.JSON(http.StatusInternalServerError, errBody)
 		return
 	}
 
 	ctx.JSON(201, gin.H{
 		"message": "OK",
 	})
+	return
 }

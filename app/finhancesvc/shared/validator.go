@@ -21,6 +21,7 @@ type ValidationErrBody struct {
 func ParseValidatorError(err error) map[string]ValidationErrBody {
 	parsedErrors := make(map[string]ValidationErrBody)
 	validationErrors := err.(validator.ValidationErrors)
+
 	for _, validationError := range validationErrors {
 		fieldName := strings.ToLower(validationError.StructField())
 		parsedErrors[fieldName] = ValidationErrBody{
@@ -28,6 +29,7 @@ func ParseValidatorError(err error) map[string]ValidationErrBody {
 			Value:     fmt.Sprintf("%v", validationError.Value()),
 		}
 	}
+
 	return parsedErrors
 }
 

@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS user_activation_token_idx;
