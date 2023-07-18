@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/login", authModuleInstance.loginHandler)
 	router.POST("/register", authModuleInstance.registerHandler)
 	router.GET("/account-activation", authModuleInstance.accountActivationHandler)
