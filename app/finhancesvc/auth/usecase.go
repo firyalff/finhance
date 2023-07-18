@@ -11,7 +11,7 @@ import (
 func getUserByCredentials(ctx context.Context, credentials loginPayload) (user userDB, err error) {
 	userRecord, err := getUserByEmail(ctx, credentials.Email)
 	if err != nil {
-		if err != pgx.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return userDB{}, shared.ErrNotFound
 		}
 		return
