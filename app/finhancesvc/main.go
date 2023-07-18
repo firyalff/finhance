@@ -35,14 +35,16 @@ func main() {
 		auth.InitModule(DBPool, *cfg)
 
 		router := drivers.InitRouting()
+		baseRouter := router.Group("")
+		v1Router := router.Group("/v1")
 
 		err = drivers.InitLogger(cfg.SentryDSN, router)
 		if err != nil {
 			panic(err)
 		}
 
-		RegisterRoutes(router)
-		auth.RegisterRoutes(router)
+		RegisterRoutes(baseRouter)
+		auth.RegisterRoutes(v1Router)
 
 		return drivers.StartRouteServer(router)
 	}))
