@@ -3,7 +3,6 @@ package cashflow
 import (
 	"finhancesvc/middlewares"
 	"finhancesvc/shared"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -40,7 +39,6 @@ func (cashflowModule CashflowModule) listCashflowHandler(ctx *gin.Context) {
 	}
 
 	userID := ctx.GetString(middlewares.UserIDKey)
-	fmt.Println(userID)
 
 	cashflows, total, err := getUserCashflows(ctx, userID, payload.Limit, payload.Offset)
 	if err != nil {
