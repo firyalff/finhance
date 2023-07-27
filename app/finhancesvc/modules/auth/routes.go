@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.RouterGroup) {
-	router.POST("/login", authModuleInstance.loginHandler)
-	router.POST("/register", authModuleInstance.registerHandler)
-	router.GET("/account-activation", authModuleInstance.accountActivationHandler)
+func (authModule AuthModule) RegisterRoutes(router *gin.RouterGroup) {
+	router.POST("/login", AuthModuleInstance.loginHandler)
+	router.POST("/register", AuthModuleInstance.registerHandler)
+	router.GET("/account-activation", AuthModuleInstance.accountActivationHandler)
 }
 
 type loginPayload struct {

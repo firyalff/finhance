@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"finhancesvc/shared"
 	"log"
 	"time"
 
@@ -31,7 +32,7 @@ const (
 
 func getUserByEmail(ctx context.Context, email string) (user userDB, err error) {
 	query := "SELECT * FROM users WHERE email=$1"
-	row := authModuleInstance.dbPool.QueryRow(ctx, query, email)
+	row := AuthModuleInstance.dbPool.QueryRow(ctx, query, email)
 
 	if err := row.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.Password, &user.Status, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		if err != pgx.ErrNoRows {
@@ -46,13 +47,8 @@ func validateUserPassword(inputPassword, userPassword string) (err error) {
 	return bcrypt.CompareHashAndPassword([]byte(userPassword), []byte(inputPassword))
 }
 
-type UserJWTClaims struct {
-	UserID string `json:"user_id"`
-	jwt.RegisteredClaims
-}
-
 func generateJWT(userID string, secret string, dayToExpire int) (string, error) {
-	claims := UserJWTClaims{
+	claims := shared.UserJWTClaims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: &jwt.NumericDate{time.Now().AddDate(0, 0, dayToExpire)},
@@ -65,7 +61,7 @@ func generateJWT(userID string, secret string, dayToExpire int) (string, error) 
 func countUserByEmail(ctx context.Context, email string) (totalRow int, err error) {
 	query := "SELECT count(id) FROM users WHERE email=$1"
 
-	row := authModuleInstance.dbPool.QueryRow(ctx, query, email)
+	row := AuthModuleInstance.dbPool.QueryRow(ctx, query, email)
 	err = row.Scan(&totalRow)
 
 	return

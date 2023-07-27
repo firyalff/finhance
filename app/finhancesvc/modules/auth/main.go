@@ -11,10 +11,10 @@ type AuthModule struct {
 	serverConfig configs.ServerConfig
 }
 
-var authModuleInstance AuthModule
+var AuthModuleInstance AuthModule
 
 func InitModule(dbPool *pgxpool.Pool, serverConfig configs.ServerConfig) {
-	authModuleInstance = AuthModule{
+	AuthModuleInstance = AuthModule{
 		dbPool:       dbPool,
 		serverConfig: serverConfig,
 	}

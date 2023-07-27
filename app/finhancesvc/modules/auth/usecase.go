@@ -45,7 +45,7 @@ func validateUniqueEmailRegistration(ctx context.Context, email string) (err err
 func registerNewUser(ctx context.Context, registrationRecord registerPayload, baseURL string) (err error) {
 	const REGISTRATION_MAIL_SUBJECT = "Finhance New User"
 
-	tx, err := authModuleInstance.dbPool.Begin(ctx)
+	tx, err := AuthModuleInstance.dbPool.Begin(ctx)
 	if err != nil {
 		log.Print(err)
 		return shared.ErrInternal
@@ -64,16 +64,16 @@ func registerNewUser(ctx context.Context, registrationRecord registerPayload, ba
 	accountActivationLink := baseURL + "/account-activation?registration_token=" + activationToken
 	registrationMailContent := "Please activate your account by visiting <a href=" + accountActivationLink + ">this link</a>"
 
-	mailSession := shared.SMTPAuth(authModuleInstance.serverConfig.SMTPUsername, authModuleInstance.serverConfig.SMTPPassword, authModuleInstance.serverConfig.SMTPHostURL)
+	mailSession := shared.SMTPAuth(AuthModuleInstance.serverConfig.SMTPUsername, AuthModuleInstance.serverConfig.SMTPPassword, AuthModuleInstance.serverConfig.SMTPHostURL)
 
 	mailContent := shared.SMTPMailConfig{
-		Sender:    authModuleInstance.serverConfig.EmailDefaultSender,
+		Sender:    AuthModuleInstance.serverConfig.EmailDefaultSender,
 		Recipient: registrationRecord.Email,
 		Subject:   REGISTRATION_MAIL_SUBJECT,
 		Body:      registrationMailContent,
 	}
 
-	err = shared.SMTPSendMail(authModuleInstance.serverConfig.SMTPHostURL, authModuleInstance.serverConfig.SMTPHostPORT, mailSession, mailContent)
+	err = shared.SMTPSendMail(AuthModuleInstance.serverConfig.SMTPHostURL, AuthModuleInstance.serverConfig.SMTPHostPORT, mailSession, mailContent)
 	if err != nil {
 
 		log.Print(err)
@@ -86,7 +86,7 @@ func registerNewUser(ctx context.Context, registrationRecord registerPayload, ba
 }
 
 func activateAccount(ctx context.Context, activationToken string) (err error) {
-	tx, err := authModuleInstance.dbPool.Begin(ctx)
+	tx, err := AuthModuleInstance.dbPool.Begin(ctx)
 	if err != nil {
 		log.Print(err)
 		return shared.ErrInternal
