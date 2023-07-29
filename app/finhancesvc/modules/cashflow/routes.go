@@ -16,6 +16,7 @@ func (cashflowModule CashflowModule) RegisterRoutes(router *gin.RouterGroup) {
 	routeGroup.Use(middlewares.AuthMiddleware([]byte(cashflowModule.serverConfig.JWTSecret)))
 
 	routeGroup.GET("", CashflowModuleInstance.listCashflowHandler)
+	routeGroup.GET("/:id", CashflowModuleInstance.detailCashflowHandler)
 	routeGroup.POST("", CashflowModuleInstance.createCashflowHandler)
 
 }
@@ -63,22 +64,74 @@ func (cashflowModule CashflowModule) listCashflowHandler(ctx *gin.Context) {
 }
 
 type cashflowCreationPayload struct {
+	Amount           int     `json:"amount" validate:"required,gt=0"`
+	Name             string  `json:"name" validate:"required,min=3"`
+	Notes            string  `json:"notes"`
+	CashflowType     string  `json:"type" validate:"required,oneof=income expense"`
+	ProofDocumentUrl *string `json:"proof_document_url"`
 }
 
 func (cashflowModule CashflowModule) createCashflowHandler(ctx *gin.Context) {
 	var payload cashflowCreationPayload
 	ctx.Bind(&payload)
 
+	err := shared.Validator().Struct(payload)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("BAD_REQ", shared.ParseValidatorError(err))
+		ctx.JSON(400, errBody)
+		return
+	}
+
+	userID := ctx.GetString(middlewares.UserIDKey)
+
+	err = createNewUserCashflow(ctx, userID, payload)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("INTERNALERR", err)
+		ctx.JSON(500, errBody)
+		return
+	}
+
 	ctx.JSON(201, gin.H{
 		"message": "OK",
 	})
 }
 
+type DetailedCashflowResponse struct {
+	Id               string     `json:"id"`
+	Amount           int        `json:"amount"`
+	CashflowType     string     `json:"type"`
+	ProofDocumentUrl *string    `json:"proof_document_url"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        *time.Time `json:"updated_at"`
+}
+
 func (cashflowModule CashflowModule) detailCashflowHandler(ctx *gin.Context) {
 	var payload shared.DetailByIDRequest
-	ctx.Bind(&payload)
+	ctx.BindUri(&payload)
 
-	ctx.JSON(200, gin.H{
-		"message": "OK",
-	})
+	userID := ctx.GetString(middlewares.UserIDKey)
+
+	cashflow, err := getUserCashflowByID(ctx, userID, payload.ID)
+	if err != nil {
+		if err == shared.ErrNotFound {
+			ctx.JSON(http.StatusNotFound, shared.GenerateErrorResponse("NOT_FOUND", nil))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
+		}
+		return
+	}
+	resp := DetailedCashflowResponse{
+		Id:               cashflow.Id.String(),
+		Amount:           int(cashflow.Amount),
+		CashflowType:     cashflow.CashflowType,
+		ProofDocumentUrl: cashflow.ProofDocumentUrl,
+		CreatedAt:        cashflow.CreatedAt.Time,
+		UpdatedAt:        nil,
+	}
+
+	if &cashflow.UpdatedAt != nil {
+		resp.UpdatedAt = &cashflow.UpdatedAt.Time
+	}
+
+	ctx.JSON(200, resp)
 }

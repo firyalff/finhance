@@ -14,7 +14,7 @@ type cashflowDB struct {
 	CashflowType     string
 	UserID           uuid.UUID
 	Amount           int32
-	ProofDocumentUrl string
+	ProofDocumentUrl *string
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 }
@@ -55,5 +55,33 @@ func getCashflowsByUserID(ctx context.Context, tx pgx.Tx, userID string, limit, 
 		log.Print(err)
 	}
 
+	return
+}
+
+func getCashflowByUserIDandID(ctx context.Context, userID, cashflowID string) (cashflow cashflowDB, err error) {
+	query := "SELECT id, cashflow_type, amount, proof_document_url, created_at, updated_at FROM cashflows WHERE user_id=$1 AND id=$2"
+	row := CashflowModuleInstance.dbPool.QueryRow(ctx, query, userID, cashflowID)
+
+	if err := row.Scan(&cashflow.Id, &cashflow.CashflowType, &cashflow.Amount, &cashflow.ProofDocumentUrl, &cashflow.CreatedAt, &cashflow.UpdatedAt); err != nil {
+		if err != pgx.ErrNoRows {
+			log.Print(err)
+		}
+		return cashflowDB{}, err
+	}
+	return
+}
+
+func createCashflow(ctx context.Context, userID string, cashflowData cashflowCreationPayload) (err error) {
+	cashflowIDUUID, err := uuid.NewV7()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	query := `INSERT INTO cashflows(id, user_id, amount, name, notes, cashflow_type, proof_document_url) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err = CashflowModuleInstance.dbPool.Exec(ctx, query, cashflowIDUUID.String(), userID, cashflowData.Amount, cashflowData.Name, cashflowData.Notes, cashflowData.CashflowType, cashflowData.ProofDocumentUrl)
+	if err != nil {
+		log.Print(err)
+	}
 	return
 }
