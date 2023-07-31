@@ -2,7 +2,9 @@ package cashflow
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/jackc/pgx/pgtype"
@@ -84,4 +86,30 @@ func createCashflow(ctx context.Context, userID string, cashflowData cashflowCre
 		log.Print(err)
 	}
 	return
+}
+
+func getUserCashflowByIDInTx(ctx context.Context, tx pgx.Tx, userID, cashflowID string) (cashflow cashflowDB, err error) {
+	query := "SELECT id, cashflow_type, amount, proof_document_url, created_at, updated_at FROM cashflows WHERE user_id=$1 AND id=$2"
+	row := tx.QueryRow(ctx, query, userID, cashflowID)
+
+	if err := row.Scan(&cashflow.Id, &cashflow.CashflowType, &cashflow.Amount, &cashflow.ProofDocumentUrl, &cashflow.CreatedAt, &cashflow.UpdatedAt); err != nil {
+		if err != pgx.ErrNoRows {
+			log.Print(err)
+		}
+		return cashflowDB{}, err
+	}
+	return
+}
+
+func updateCashflowByID(ctx context.Context, tx pgx.Tx, cashflowID string, updateData cashflowUpdatePayload) (err error) {
+	query := `UPDATE cashflows SET amount= $1, name= $2, notes= $3, cashflow_type= $4, proof_document_url= $5, updated_at= $6 WHERE id= $7`
+
+	fmt.Println(cashflowID)
+
+	_, err = tx.Exec(ctx, query, updateData.Amount, updateData.Name, updateData.Notes, updateData.CashflowType, updateData.ProofDocumentUrl, time.Now(), cashflowID)
+	if err != nil {
+		log.Print(err)
+	}
+	return
+
 }

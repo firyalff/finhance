@@ -3,15 +3,21 @@ package cashflow
 import (
 	"context"
 	"finhancesvc/shared"
-	"log"
 
 	"github.com/jackc/pgx"
 )
 
 func getUserCashflows(ctx context.Context, userID string, limit, offset int32) (cashflows []cashflowDB, totalCashflow int, err error) {
 	tx, err := CashflowModuleInstance.dbPool.Begin(ctx)
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+		tx.Commit(ctx)
+	}()
+
 	if err != nil {
-		log.Print(err)
+
 		return []cashflowDB{}, 0, shared.ErrInternal
 	}
 
@@ -42,4 +48,27 @@ func getUserCashflowByID(ctx context.Context, userID, cashflowID string) (cashfl
 
 func createNewUserCashflow(ctx context.Context, userID string, cashflowData cashflowCreationPayload) (err error) {
 	return createCashflow(ctx, userID, cashflowData)
+}
+
+func updateUserCashflow(ctx context.Context, userID, cashflowID string, payload cashflowUpdatePayload) (err error) {
+	tx, err := CashflowModuleInstance.dbPool.Begin(ctx)
+
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+		tx.Commit(ctx)
+	}()
+
+	_, err = getUserCashflowByIDInTx(ctx, tx, userID, cashflowID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return shared.ErrNotFound
+		}
+		return
+	}
+
+	err = updateCashflowByID(ctx, tx, cashflowID, payload)
+
+	return
 }

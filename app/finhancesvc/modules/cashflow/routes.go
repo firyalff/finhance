@@ -18,6 +18,7 @@ func (cashflowModule CashflowModule) RegisterRoutes(router *gin.RouterGroup) {
 	routeGroup.GET("", CashflowModuleInstance.listCashflowHandler)
 	routeGroup.GET("/:id", CashflowModuleInstance.detailCashflowHandler)
 	routeGroup.POST("", CashflowModuleInstance.createCashflowHandler)
+	routeGroup.PUT("/:id", CashflowModuleInstance.updateCashflowHandler)
 
 }
 
@@ -134,4 +135,41 @@ func (cashflowModule CashflowModule) detailCashflowHandler(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, resp)
+}
+
+type cashflowUpdatePayload struct {
+	Amount           int     `json:"amount" validate:"required,gt=0"`
+	Name             string  `json:"name" validate:"required,min=3"`
+	Notes            string  `json:"notes"`
+	CashflowType     string  `json:"type" validate:"required,oneof=income expense"`
+	ProofDocumentUrl *string `json:"proof_document_url"`
+}
+
+func (cashflowModule CashflowModule) updateCashflowHandler(ctx *gin.Context) {
+	cashflowID := ctx.Param("id")
+	var payload cashflowUpdatePayload
+	ctx.Bind(&payload)
+
+	err := shared.Validator().Struct(payload)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("BAD_REQ", shared.ParseValidatorError(err))
+		ctx.JSON(400, errBody)
+		return
+	}
+
+	userID := ctx.GetString(middlewares.UserIDKey)
+
+	err = updateUserCashflow(ctx, userID, cashflowID, payload)
+	if err != nil {
+		if err == shared.ErrNotFound {
+			ctx.JSON(http.StatusNotFound, shared.GenerateErrorResponse("NOT_FOUND", nil))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
+		}
+		return
+	}
+
+	ctx.JSON(200, gin.H{
+		"message": "OK",
+	})
 }
