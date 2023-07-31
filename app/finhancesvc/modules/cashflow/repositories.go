@@ -2,7 +2,6 @@ package cashflow
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -103,8 +102,6 @@ func getUserCashflowByIDInTx(ctx context.Context, tx pgx.Tx, userID, cashflowID 
 
 func updateCashflowByID(ctx context.Context, tx pgx.Tx, cashflowID string, updateData cashflowUpdatePayload) (err error) {
 	query := `UPDATE cashflows SET amount= $1, name= $2, notes= $3, cashflow_type= $4, proof_document_url= $5, updated_at= $6 WHERE id= $7`
-
-	fmt.Println(cashflowID)
 
 	_, err = tx.Exec(ctx, query, updateData.Amount, updateData.Name, updateData.Notes, updateData.CashflowType, updateData.ProofDocumentUrl, time.Now(), cashflowID)
 	if err != nil {
