@@ -10,16 +10,21 @@ import (
 )
 
 func (cashflowModule CashflowModule) RegisterRoutes(router *gin.RouterGroup) {
-	const PATH_PREFIX = "/cashflows"
-	routeGroup := router.Group(PATH_PREFIX)
+	const CASHFLOW_PATH_PREFIX = "/cashflows"
+	cashflowRouteGroup := router.Group(CASHFLOW_PATH_PREFIX)
 
-	routeGroup.Use(middlewares.AuthMiddleware([]byte(cashflowModule.serverConfig.JWTSecret)))
+	cashflowRouteGroup.Use(middlewares.AuthMiddleware([]byte(cashflowModule.serverConfig.JWTSecret)))
 
-	routeGroup.GET("", CashflowModuleInstance.listCashflowHandler)
-	routeGroup.GET("/:id", CashflowModuleInstance.detailCashflowHandler)
-	routeGroup.POST("", CashflowModuleInstance.createCashflowHandler)
-	routeGroup.PUT("/:id", CashflowModuleInstance.updateCashflowHandler)
+	cashflowRouteGroup.GET("", CashflowModuleInstance.listCashflowHandler)
+	cashflowRouteGroup.GET("/:id", CashflowModuleInstance.detailCashflowHandler)
+	cashflowRouteGroup.POST("", CashflowModuleInstance.createCashflowHandler)
+	cashflowRouteGroup.PUT("/:id", CashflowModuleInstance.updateCashflowHandler)
 
+	const CATEGORY_PATH_PREFIX = "/cashflow-categories"
+	categoryRouteGroup := router.Group(CATEGORY_PATH_PREFIX)
+
+	categoryRouteGroup.Use(middlewares.AuthMiddleware([]byte(cashflowModule.serverConfig.JWTSecret)))
+	categoryRouteGroup.POST("", CashflowModuleInstance.createCashflowCategoryHandler)
 }
 
 type ListCashflowResponse struct {
@@ -170,6 +175,41 @@ func (cashflowModule CashflowModule) updateCashflowHandler(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, gin.H{
+		"message": "OK",
+	})
+}
+
+type cashflowCategoryCreatePayload struct {
+	Name         string `json:"name"`
+	CategoryType string `json:"type"`
+}
+
+func (cashflowModule CashflowModule) createCashflowCategoryHandler(ctx *gin.Context) {
+	var payload cashflowCategoryCreatePayload
+	ctx.Bind(&payload)
+
+	err := shared.Validator().Struct(payload)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("BAD_REQ", shared.ParseValidatorError(err))
+		ctx.JSON(400, errBody)
+		return
+	}
+
+	userID := ctx.GetString(middlewares.UserIDKey)
+
+	err = createUserCashflowCategory(ctx, userID, payload)
+	if err != nil {
+		if err == shared.ErrNotFound {
+			ctx.JSON(http.StatusNotFound, shared.GenerateErrorResponse("NOT_FOUND", nil))
+		} else if err == shared.ErrExist {
+			ctx.JSON(http.StatusConflict, shared.GenerateErrorResponse("RESOURCE_EXIST", nil))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
+		}
+		return
+	}
+
+	ctx.JSON(201, gin.H{
 		"message": "OK",
 	})
 }

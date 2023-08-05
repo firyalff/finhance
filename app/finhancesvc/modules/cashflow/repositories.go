@@ -3,6 +3,7 @@ package cashflow
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -12,6 +13,7 @@ import (
 
 type cashflowDB struct {
 	Id               uuid.UUID
+	CategoryID       *string
 	CashflowType     string
 	UserID           uuid.UUID
 	Amount           int32
@@ -109,4 +111,19 @@ func updateCashflowByID(ctx context.Context, tx pgx.Tx, cashflowID string, updat
 	}
 	return
 
+}
+
+func createCashflowCategory(ctx context.Context, userID string, categoryData cashflowCategoryCreatePayload) (err error) {
+	categoryIDUUID, err := uuid.NewV7()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	query := `INSERT INTO cashflow_categories(id, user_id, cashflow_category_type, name) VALUES ($1, $2, $3, $4)`
+	_, err = CashflowModuleInstance.dbPool.Exec(ctx, query, categoryIDUUID.String(), userID, categoryData.CategoryType, strings.ToLower(categoryData.Name))
+	if err != nil {
+		log.Print(err)
+	}
+	return
 }

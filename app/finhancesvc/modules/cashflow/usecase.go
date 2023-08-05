@@ -72,3 +72,11 @@ func updateUserCashflow(ctx context.Context, userID, cashflowID string, payload 
 
 	return
 }
+
+func createUserCashflowCategory(ctx context.Context, userID string, payload cashflowCategoryCreatePayload) (err error) {
+	err = createCashflowCategory(ctx, userID, payload)
+	if shared.PGDuplicationError(err) {
+		err = shared.ErrExist
+	}
+	return
+}
