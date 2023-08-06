@@ -113,6 +113,16 @@ func updateCashflowByID(ctx context.Context, tx pgx.Tx, cashflowID string, updat
 
 }
 
+type cashflowCategoryDB struct {
+	Id                   uuid.UUID
+	UserID               uuid.UUID
+	CashflowCategoryType string
+	Name                 string
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
+}
+
 func createCashflowCategory(ctx context.Context, userID string, categoryData cashflowCategoryCreatePayload) (err error) {
 	categoryIDUUID, err := uuid.NewV7()
 	if err != nil {
@@ -125,5 +135,44 @@ func createCashflowCategory(ctx context.Context, userID string, categoryData cas
 	if err != nil {
 		log.Print(err)
 	}
+	return
+}
+
+func countCashflowCategoriesByUserID(ctx context.Context, tx pgx.Tx, userID string) (total int, err error) {
+	query := "SELECT count(id) FROM cashflow_categories WHERE user_id=$1 AND deleted_at IS NULL"
+
+	row := tx.QueryRow(ctx, query, userID)
+	err = row.Scan(&total)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return
+}
+
+func getCashflowCategoriesByUserID(ctx context.Context, tx pgx.Tx, userID string, limit, offset int32) (cashflowCategories []cashflowCategoryDB, err error) {
+	query := "SELECT id, cashflow_category_type, name, created_at FROM cashflow_categories WHERE user_id=$1 AND deleted_at IS NULL ORDER BY id DESC LIMIT $2 OFFSET $3"
+
+	rows, err := tx.Query(ctx, query, userID, limit, offset)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var row cashflowCategoryDB
+		err := rows.Scan(&row.Id, &row.CashflowCategoryType, &row.Name, &row.CreatedAt)
+		if err != nil {
+			log.Print(err)
+		}
+		cashflowCategories = append(cashflowCategories, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Print(err)
+	}
+
 	return
 }

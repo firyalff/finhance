@@ -25,6 +25,7 @@ func (cashflowModule CashflowModule) RegisterRoutes(router *gin.RouterGroup) {
 
 	categoryRouteGroup.Use(middlewares.AuthMiddleware([]byte(cashflowModule.serverConfig.JWTSecret)))
 	categoryRouteGroup.POST("", CashflowModuleInstance.createCashflowCategoryHandler)
+	categoryRouteGroup.GET("", CashflowModuleInstance.listCashflowCategoryHandler)
 }
 
 type ListCashflowResponse struct {
@@ -212,4 +213,46 @@ func (cashflowModule CashflowModule) createCashflowCategoryHandler(ctx *gin.Cont
 	ctx.JSON(201, gin.H{
 		"message": "OK",
 	})
+}
+
+type ListCashflowCategoryResponse struct {
+	Id        string    `json:"id"`
+	Name      string    `json:"name"`
+	Type      string    `json:"type"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (cashflowModule CashflowModule) listCashflowCategoryHandler(ctx *gin.Context) {
+	var payload shared.PagedRequest
+	ctx.Bind(&payload)
+
+	err := shared.Validator().Struct(payload)
+	if err != nil {
+		errBody := shared.GenerateErrorResponse("BAD_REQ", shared.ParseValidatorError(err))
+		ctx.JSON(400, errBody)
+		return
+	}
+
+	userID := ctx.GetString(middlewares.UserIDKey)
+
+	cashflowCategories, total, err := getUserCashflowCategories(ctx, userID, payload.Limit, payload.Offset)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
+		return
+	}
+
+	cashflowCategoriesResp := make([]ListCashflowCategoryResponse, len(cashflowCategories))
+
+	for index, cashflowCategory := range cashflowCategories {
+		cashflowCategoriesResp[index] = ListCashflowCategoryResponse{
+			Id:        cashflowCategory.Id.String(),
+			Name:      cashflowCategory.Name,
+			Type:      cashflowCategory.CashflowCategoryType,
+			CreatedAt: cashflowCategory.CreatedAt.Time,
+		}
+	}
+
+	response := shared.GeneratePagedResponse(total, int(payload.Limit), int(payload.Offset), cashflowCategoriesResp)
+
+	ctx.JSON(200, response)
 }

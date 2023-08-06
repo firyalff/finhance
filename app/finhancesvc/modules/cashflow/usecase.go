@@ -80,3 +80,30 @@ func createUserCashflowCategory(ctx context.Context, userID string, payload cash
 	}
 	return
 }
+
+func getUserCashflowCategories(ctx context.Context, userID string, limit, offset int32) (cashflows []cashflowCategoryDB, totalCashflowCategories int, err error) {
+	tx, err := CashflowModuleInstance.dbPool.Begin(ctx)
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+		tx.Commit(ctx)
+	}()
+
+	if err != nil {
+
+		return []cashflowCategoryDB{}, 0, shared.ErrInternal
+	}
+
+	totalCashflowCategories, err = countCashflowCategoriesByUserID(ctx, tx, userID)
+	if err != nil {
+		return []cashflowCategoryDB{}, 0, shared.ErrInternal
+	}
+
+	cashflows, err = getCashflowCategoriesByUserID(ctx, tx, userID, limit, offset)
+	if err != nil {
+		return []cashflowCategoryDB{}, 0, shared.ErrInternal
+	}
+
+	return
+}
