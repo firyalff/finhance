@@ -1,10 +1,7 @@
 BEGIN;
 
-CREATE TYPE CASHFLOW_TYPE_ENUM AS ENUM ('income', 'expense');
-
 CREATE TABLE cashflows (
     id uuid PRIMARY KEY,
-    cashflow_type CASHFLOW_TYPE_ENUM NOT NULL,
     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
     name TEXT NOT NULL,
     notes TEXT,
