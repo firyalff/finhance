@@ -17,7 +17,6 @@ func getUserCashflows(ctx context.Context, userID string, limit, offset int32) (
 	}()
 
 	if err != nil {
-
 		return []cashflowDB{}, 0, shared.ErrInternal
 	}
 
@@ -47,7 +46,26 @@ func getUserCashflowByID(ctx context.Context, userID, cashflowID string) (cashfl
 }
 
 func createNewUserCashflow(ctx context.Context, userID string, cashflowData cashflowCreationPayload) (err error) {
-	return createCashflow(ctx, userID, cashflowData)
+	tx, err := CashflowModuleInstance.dbPool.Begin(ctx)
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+		tx.Commit(ctx)
+	}()
+	if err != nil {
+		return shared.ErrInternal
+	}
+
+	total, err := countUserCashflowCategoriesByID(ctx, tx, userID, cashflowData.CashflowCategoryID)
+	if err != nil {
+		return shared.ErrInternal
+	}
+	if total < 1 {
+		return shared.ErrNotFound
+	}
+
+	return createCashflow(ctx, tx, userID, cashflowData)
 }
 
 func updateUserCashflow(ctx context.Context, userID, cashflowID string, payload cashflowUpdatePayload) (err error) {

@@ -74,15 +74,15 @@ func getCashflowByUserIDandID(ctx context.Context, userID, cashflowID string) (c
 	return
 }
 
-func createCashflow(ctx context.Context, userID string, cashflowData cashflowCreationPayload) (err error) {
+func createCashflow(ctx context.Context, tx pgx.Tx, userID string, cashflowData cashflowCreationPayload) (err error) {
 	cashflowIDUUID, err := uuid.NewV7()
 	if err != nil {
 		log.Print(err)
 		return
 	}
 
-	query := `INSERT INTO cashflows(id, user_id, amount, name, notes, cashflow_type, proof_document_url) VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	_, err = CashflowModuleInstance.dbPool.Exec(ctx, query, cashflowIDUUID.String(), userID, cashflowData.Amount, cashflowData.Name, cashflowData.Notes, cashflowData.CashflowType, cashflowData.ProofDocumentUrl)
+	query := `INSERT INTO cashflows(id, user_id, amount, name, notes, category_id, proof_document_url) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err = CashflowModuleInstance.dbPool.Exec(ctx, query, cashflowIDUUID.String(), userID, cashflowData.Amount, cashflowData.Name, cashflowData.Notes, cashflowData.CashflowCategoryID, cashflowData.ProofDocumentUrl)
 	if err != nil {
 		log.Print(err)
 	}
@@ -142,6 +142,18 @@ func countCashflowCategoriesByUserID(ctx context.Context, tx pgx.Tx, userID stri
 	query := "SELECT count(id) FROM cashflow_categories WHERE user_id=$1 AND deleted_at IS NULL"
 
 	row := tx.QueryRow(ctx, query, userID)
+	err = row.Scan(&total)
+	if err != nil {
+		log.Print(err)
+	}
+
+	return
+}
+
+func countUserCashflowCategoriesByID(ctx context.Context, tx pgx.Tx, userID, categoryID string) (total int, err error) {
+	query := "SELECT count(id) FROM cashflow_categories WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL"
+
+	row := tx.QueryRow(ctx, query, categoryID, userID)
 	err = row.Scan(&total)
 	if err != nil {
 		log.Print(err)
