@@ -6,6 +6,7 @@ import (
 	"finhancesvc/drivers"
 	"finhancesvc/modules/auth"
 	"finhancesvc/modules/cashflow"
+	"finhancesvc/modules/statistic"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -35,6 +36,7 @@ func main() {
 
 		auth.InitModule(DBPool, *cfg)
 		cashflow.InitModule(DBPool, *cfg)
+		statistic.InitModule(DBPool, *cfg)
 
 		router := drivers.InitRouting()
 		baseRouter := router.Group("")
@@ -48,6 +50,7 @@ func main() {
 		RegisterRoutes(baseRouter)
 		auth.AuthModuleInstance.RegisterRoutes(v1Router)
 		cashflow.CashflowModuleInstance.RegisterRoutes(v1Router)
+		statistic.StatisticModuleInstance.RegisterRoutes(v1Router)
 
 		return drivers.StartRouteServer(router)
 	}))
