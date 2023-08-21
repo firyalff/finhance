@@ -14,7 +14,6 @@ import (
 type cashflowDB struct {
 	Id               uuid.UUID
 	CategoryID       *string
-	CashflowType     string
 	UserID           uuid.UUID
 	Amount           int32
 	ProofDocumentUrl *string
@@ -35,7 +34,9 @@ func countCashflowByUserID(ctx context.Context, tx pgx.Tx, userID string) (total
 }
 
 func getCashflowsByUserID(ctx context.Context, tx pgx.Tx, userID string, limit, offset int32) (cashflows []cashflowDB, err error) {
-	query := "SELECT id, cashflow_type, amount, created_at FROM cashflows WHERE user_id=$1 ORDER BY id DESC LIMIT $2 OFFSET $3"
+	query := `SELECT cashflows.id, cashflow_category_type, amount, cashflows.created_at FROM cashflows 
+	JOIN cashflow_categories ON category_id = cashflow_categories.id 
+	WHERE user_id=$1 ORDER BY id DESC LIMIT $2 OFFSET $3`
 
 	rows, err := tx.Query(ctx, query, userID, limit, offset)
 	if err != nil {
@@ -103,9 +104,9 @@ func getUserCashflowByIDInTx(ctx context.Context, tx pgx.Tx, userID, cashflowID 
 }
 
 func updateCashflowByID(ctx context.Context, tx pgx.Tx, cashflowID string, updateData cashflowUpdatePayload) (err error) {
-	query := `UPDATE cashflows SET amount= $1, name= $2, notes= $3, cashflow_type= $4, proof_document_url= $5, updated_at= $6 WHERE id= $7`
+	query := `UPDATE cashflows SET amount= $1, name= $2, notes= $3, category_id= $4, proof_document_url= $5, updated_at= $6 WHERE id= $7`
 
-	_, err = tx.Exec(ctx, query, updateData.Amount, updateData.Name, updateData.Notes, updateData.CashflowType, updateData.ProofDocumentUrl, time.Now(), cashflowID)
+	_, err = tx.Exec(ctx, query, updateData.Amount, updateData.Name, updateData.Notes, updateData.CashflowCategoryID, updateData.ProofDocumentUrl, time.Now(), cashflowID)
 	if err != nil {
 		log.Print(err)
 	}

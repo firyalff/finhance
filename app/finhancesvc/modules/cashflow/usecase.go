@@ -86,6 +86,14 @@ func updateUserCashflow(ctx context.Context, userID, cashflowID string, payload 
 		return
 	}
 
+	total, err := countUserCashflowCategoriesByID(ctx, tx, userID, payload.CashflowCategoryID)
+	if err != nil {
+		return shared.ErrInternal
+	}
+	if total < 1 {
+		return shared.ErrNotFound
+	}
+
 	err = updateCashflowByID(ctx, tx, cashflowID, payload)
 
 	return

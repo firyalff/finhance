@@ -144,11 +144,11 @@ func (cashflowModule CashflowModule) detailCashflowHandler(ctx *gin.Context) {
 }
 
 type cashflowUpdatePayload struct {
-	Amount           int     `json:"amount" validate:"required,gt=0"`
-	Name             string  `json:"name" validate:"required,min=3"`
-	Notes            string  `json:"notes"`
-	CashflowType     string  `json:"type" validate:"required,oneof=income expense"`
-	ProofDocumentUrl *string `json:"proof_document_url"`
+	Amount             int     `json:"amount" validate:"required,gt=0"`
+	Name               string  `json:"name" validate:"required,min=3"`
+	Notes              string  `json:"notes"`
+	CashflowCategoryID string  `json:"cashflow_category_id" validate:"required"`
+	ProofDocumentUrl   *string `json:"proof_document_url"`
 }
 
 func (cashflowModule CashflowModule) updateCashflowHandler(ctx *gin.Context) {
