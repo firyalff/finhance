@@ -32,6 +32,7 @@ type ListCashflowResponse struct {
 	Id                   string    `json:"id"`
 	Amount               int       `json:"amount"`
 	CashflowCategoryName string    `json:"category_name"`
+	CashflowType         string    `json:"cashflow_type"`
 	CreatedAt            time.Time `json:"created_at"`
 }
 
@@ -61,6 +62,7 @@ func (cashflowModule CashflowModule) listCashflowHandler(ctx *gin.Context) {
 			Id:                   cashflow.Id.String(),
 			Amount:               int(cashflow.Amount),
 			CashflowCategoryName: *cashflow.CategoryName,
+			CashflowType:         cashflow.CashflowType,
 			CreatedAt:            cashflow.CreatedAt.Time,
 		}
 	}
@@ -106,6 +108,7 @@ func (cashflowModule CashflowModule) createCashflowHandler(ctx *gin.Context) {
 type DetailedCashflowResponse struct {
 	Id                   string     `json:"id"`
 	Amount               int        `json:"amount"`
+	CashflowType         string     `json:"cashflow_type"`
 	CashflowCategoryID   string     `json:"category_id"`
 	CashflowCategoryName string     `json:"category_name"`
 	ProofDocumentUrl     *string    `json:"proof_document_url"`
@@ -133,6 +136,7 @@ func (cashflowModule CashflowModule) detailCashflowHandler(ctx *gin.Context) {
 		Amount:               int(cashflow.Amount),
 		CashflowCategoryID:   *cashflow.CategoryID,
 		CashflowCategoryName: *cashflow.CategoryName,
+		CashflowType:         cashflow.CashflowType,
 		ProofDocumentUrl:     cashflow.ProofDocumentUrl,
 		CreatedAt:            cashflow.CreatedAt.Time,
 		UpdatedAt:            nil,
