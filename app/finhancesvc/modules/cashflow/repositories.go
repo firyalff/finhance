@@ -14,6 +14,7 @@ import (
 type cashflowDB struct {
 	Id               uuid.UUID
 	CategoryID       *string
+	CategoryName     *string
 	UserID           uuid.UUID
 	Amount           int32
 	ProofDocumentUrl *string
@@ -34,7 +35,7 @@ func countCashflowByUserID(ctx context.Context, tx pgx.Tx, userID string) (total
 }
 
 func getCashflowsByUserID(ctx context.Context, tx pgx.Tx, userID string, limit, offset int32) (cashflows []cashflowDB, err error) {
-	query := `SELECT cashflows.id, cashflow_category_type, amount, cashflows.created_at FROM cashflows 
+	query := `SELECT cashflows.id, category_id, cashflow_categories.name category_name, amount, cashflows.created_at FROM cashflows 
 	JOIN cashflow_categories ON category_id = cashflow_categories.id 
 	WHERE user_id=$1 ORDER BY id DESC LIMIT $2 OFFSET $3`
 
@@ -48,7 +49,7 @@ func getCashflowsByUserID(ctx context.Context, tx pgx.Tx, userID string, limit, 
 
 	for rows.Next() {
 		var row cashflowDB
-		err := rows.Scan(&row.Id, &row.CashflowType, &row.Amount, &row.CreatedAt)
+		err := rows.Scan(&row.Id, &row.CategoryID, &row.CategoryName, &row.Amount, &row.CreatedAt)
 		if err != nil {
 			log.Print(err)
 		}
@@ -62,11 +63,14 @@ func getCashflowsByUserID(ctx context.Context, tx pgx.Tx, userID string, limit, 
 	return
 }
 
-func getCashflowByUserIDandID(ctx context.Context, userID, cashflowID string) (cashflow cashflowDB, err error) {
-	query := "SELECT id, cashflow_type, amount, proof_document_url, created_at, updated_at FROM cashflows WHERE user_id=$1 AND id=$2"
+func getUserCashflowByID(ctx context.Context, userID, cashflowID string) (cashflow cashflowDB, err error) {
+	query := `SELECT id, category_id, cashflow_categories.name category_name, amount, proof_document_url, created_at, updated_at 
+	FROM cashflows 
+	JOIN cashflow_categories ON category_id = cashflow_categories.id 
+	WHERE user_id=$1 AND id=$2`
 	row := CashflowModuleInstance.dbPool.QueryRow(ctx, query, userID, cashflowID)
 
-	if err := row.Scan(&cashflow.Id, &cashflow.CashflowType, &cashflow.Amount, &cashflow.ProofDocumentUrl, &cashflow.CreatedAt, &cashflow.UpdatedAt); err != nil {
+	if err := row.Scan(&cashflow.Id, &cashflow.CategoryID, &cashflow.CategoryName, &cashflow.Amount, &cashflow.ProofDocumentUrl, &cashflow.CreatedAt, &cashflow.UpdatedAt); err != nil {
 		if err != pgx.ErrNoRows {
 			log.Print(err)
 		}
@@ -91,10 +95,13 @@ func createCashflow(ctx context.Context, tx pgx.Tx, userID string, cashflowData 
 }
 
 func getUserCashflowByIDInTx(ctx context.Context, tx pgx.Tx, userID, cashflowID string) (cashflow cashflowDB, err error) {
-	query := "SELECT id, cashflow_type, amount, proof_document_url, created_at, updated_at FROM cashflows WHERE user_id=$1 AND id=$2"
+	query := `SELECT id, category_id, cashflow_categories.name category_name, amount, proof_document_url, created_at, updated_at 
+	FROM cashflows 
+	JOIN cashflow_categories ON category_id = cashflow_categories.id
+	WHERE user_id=$1 AND id=$2`
 	row := tx.QueryRow(ctx, query, userID, cashflowID)
 
-	if err := row.Scan(&cashflow.Id, &cashflow.CashflowType, &cashflow.Amount, &cashflow.ProofDocumentUrl, &cashflow.CreatedAt, &cashflow.UpdatedAt); err != nil {
+	if err := row.Scan(&cashflow.Id, &cashflow.CategoryID, &cashflow.CategoryName, &cashflow.Amount, &cashflow.ProofDocumentUrl, &cashflow.CreatedAt, &cashflow.UpdatedAt); err != nil {
 		if err != pgx.ErrNoRows {
 			log.Print(err)
 		}

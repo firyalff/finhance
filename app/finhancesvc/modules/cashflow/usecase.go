@@ -33,8 +33,8 @@ func getUserCashflows(ctx context.Context, userID string, limit, offset int32) (
 	return
 }
 
-func getUserCashflowByID(ctx context.Context, userID, cashflowID string) (cashflow cashflowDB, err error) {
-	cashflow, err = getCashflowByUserIDandID(ctx, userID, cashflowID)
+func getUserCashflowDetail(ctx context.Context, userID, cashflowID string) (cashflow cashflowDB, err error) {
+	cashflow, err = getUserCashflowByID(ctx, userID, cashflowID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return cashflow, shared.ErrNotFound

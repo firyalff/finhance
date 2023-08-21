@@ -29,10 +29,10 @@ func (cashflowModule CashflowModule) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 type ListCashflowResponse struct {
-	Id           string    `json:"id"`
-	Amount       int       `json:"amount"`
-	CashflowType string    `json:"type"`
-	CreatedAt    time.Time `json:"created_at"`
+	Id                   string    `json:"id"`
+	Amount               int       `json:"amount"`
+	CashflowCategoryName string    `json:"category_name"`
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 func (cashflowModule CashflowModule) listCashflowHandler(ctx *gin.Context) {
@@ -58,10 +58,10 @@ func (cashflowModule CashflowModule) listCashflowHandler(ctx *gin.Context) {
 
 	for index, cashflow := range cashflows {
 		cashflowResp[index] = ListCashflowResponse{
-			Id:           cashflow.Id.String(),
-			Amount:       int(cashflow.Amount),
-			CashflowType: cashflow.CashflowType,
-			CreatedAt:    cashflow.CreatedAt.Time,
+			Id:                   cashflow.Id.String(),
+			Amount:               int(cashflow.Amount),
+			CashflowCategoryName: *cashflow.CategoryName,
+			CreatedAt:            cashflow.CreatedAt.Time,
 		}
 	}
 
@@ -104,12 +104,13 @@ func (cashflowModule CashflowModule) createCashflowHandler(ctx *gin.Context) {
 }
 
 type DetailedCashflowResponse struct {
-	Id               string     `json:"id"`
-	Amount           int        `json:"amount"`
-	CashflowType     string     `json:"type"`
-	ProofDocumentUrl *string    `json:"proof_document_url"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        *time.Time `json:"updated_at"`
+	Id                   string     `json:"id"`
+	Amount               int        `json:"amount"`
+	CashflowCategoryID   string     `json:"category_id"`
+	CashflowCategoryName string     `json:"category_name"`
+	ProofDocumentUrl     *string    `json:"proof_document_url"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            *time.Time `json:"updated_at"`
 }
 
 func (cashflowModule CashflowModule) detailCashflowHandler(ctx *gin.Context) {
@@ -118,7 +119,7 @@ func (cashflowModule CashflowModule) detailCashflowHandler(ctx *gin.Context) {
 
 	userID := ctx.GetString(middlewares.UserIDKey)
 
-	cashflow, err := getUserCashflowByID(ctx, userID, payload.ID)
+	cashflow, err := getUserCashflowDetail(ctx, userID, payload.ID)
 	if err != nil {
 		if err == shared.ErrNotFound {
 			ctx.JSON(http.StatusNotFound, shared.GenerateErrorResponse("NOT_FOUND", nil))
@@ -128,12 +129,13 @@ func (cashflowModule CashflowModule) detailCashflowHandler(ctx *gin.Context) {
 		return
 	}
 	resp := DetailedCashflowResponse{
-		Id:               cashflow.Id.String(),
-		Amount:           int(cashflow.Amount),
-		CashflowType:     cashflow.CashflowType,
-		ProofDocumentUrl: cashflow.ProofDocumentUrl,
-		CreatedAt:        cashflow.CreatedAt.Time,
-		UpdatedAt:        nil,
+		Id:                   cashflow.Id.String(),
+		Amount:               int(cashflow.Amount),
+		CashflowCategoryID:   *cashflow.CategoryID,
+		CashflowCategoryName: *cashflow.CategoryName,
+		ProofDocumentUrl:     cashflow.ProofDocumentUrl,
+		CreatedAt:            cashflow.CreatedAt.Time,
+		UpdatedAt:            nil,
 	}
 
 	if &cashflow.UpdatedAt != nil {
