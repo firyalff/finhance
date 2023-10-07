@@ -10,13 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (statisticwModule StatisticModule) RegisterRoutes(router *gin.RouterGroup) {
+func registerRoutes(router *gin.RouterGroup) {
 	const STATISTICS_PATH_PREFIX = "/statistics"
 	statisticRouteGroup := router.Group(STATISTICS_PATH_PREFIX)
 
-	statisticRouteGroup.Use(middlewares.AuthMiddleware([]byte(statisticwModule.serverConfig.JWTSecret)))
+	statisticRouteGroup.Use(middlewares.AuthMiddleware([]byte(StatisticModuleInstance.serverConfig.JWTSecret)))
 
 	statisticRouteGroup.GET("/income-expenses", StatisticModuleInstance.incomeExpenseStatisticHandler)
+	statisticRouteGroup.GET("/cashflow-categories", StatisticModuleInstance.cashflowCategoryStatisticHandler)
 }
 
 type BasicStatisticQuery struct {
@@ -66,9 +67,16 @@ func (statisticwModule StatisticModule) incomeExpenseStatisticHandler(ctx *gin.C
 	ctx.JSON(200, resp)
 }
 
+type CategoryStatisticQuery struct {
+	BasicStatisticQuery
+	CategoryType string `form:"category_type" validate:"oneof=income expense"`
+}
+
 type CashflowCategoryStatisticComponent struct {
-	Percentage float32 `json:"percentage"`
-	Amount     int     `json:"amount"`
+	Name         string  `json:"category_name"`
+	Percentage   float32 `json:"percentage"`
+	Amount       int     `json:"amount"`
+	CategoryType string  `json:"category_type"`
 }
 
 type CashflowCategoryStatisticResponse struct {
@@ -78,12 +86,11 @@ type CashflowCategoryStatisticResponse struct {
 }
 
 func (statisticwModule StatisticModule) cashflowCategoryStatisticHandler(ctx *gin.Context) {
-	var payload BasicStatisticQuery
+	var payload CategoryStatisticQuery
 	ctx.BindQuery(&payload)
 
 	err := shared.Validator().Struct(payload)
 	if err != nil {
-		fmt.Println(err)
 		errBody := shared.GenerateErrorResponse("BAD_REQ", shared.ParseValidatorError(err))
 		ctx.JSON(400, errBody)
 		return
@@ -92,17 +99,28 @@ func (statisticwModule StatisticModule) cashflowCategoryStatisticHandler(ctx *gi
 	startTime, _ := shared.StringToRFC3339(payload.PeriodStartTime)
 	endTime, _ := shared.StringToRFC3339(payload.PeriodEndTime)
 
-	// userID := ctx.GetString(middlewares.UserIDKey)
+	userID := ctx.GetString(middlewares.UserIDKey)
 
-	// statistic, err := getUserCashflowCategoryStatistic(ctx, userID, startTime, endTime)
-	// if err != nil {
-	// 	ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
-	// 	return
-	// }
+	statistics, err := getUserCashflowCategoryStatistics(ctx, userID, payload.CategoryType, startTime, endTime)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, shared.GenerateErrorResponse("INTERNALERR", nil))
+		return
+	}
+
+	cashflowCategoryStatistics := make(map[string]CashflowCategoryStatisticComponent)
+
+	for _, statistic := range statistics {
+		cashflowCategoryStatistics[statistic.CategoryID] = CashflowCategoryStatisticComponent{
+			Name:         statistic.CategoryName,
+			Amount:       statistic.TotalAmount,
+			CategoryType: statistic.CategoryType,
+		}
+	}
 
 	resp := CashflowCategoryStatisticResponse{
-		PeriodStartTime: startTime,
-		PeriodEndTime:   endTime,
+		PeriodStartTime:            startTime,
+		PeriodEndTime:              endTime,
+		CashflowCategoryStatistics: cashflowCategoryStatistics,
 	}
 
 	ctx.JSON(200, resp)

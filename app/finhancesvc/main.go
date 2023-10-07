@@ -23,6 +23,13 @@ func main() {
 
 		cfg := cliCtx.Argv().(*configs.ServerConfig)
 
+		router := drivers.InitRouting()
+
+		err = drivers.InitLogger(cfg.SentryDSN, router)
+		if err != nil {
+			panic(err)
+		}
+
 		DBPool, err = drivers.InitDBPool(ctx, cfg.DBURI)
 		if err != nil {
 			panic(err)
@@ -34,23 +41,14 @@ func main() {
 
 		defer DBPool.Close()
 
-		auth.InitModule(DBPool, *cfg)
-		cashflow.InitModule(DBPool, *cfg)
-		statistic.InitModule(DBPool, *cfg)
-
-		router := drivers.InitRouting()
 		baseRouter := router.Group("")
 		v1Router := router.Group("/v1")
 
-		err = drivers.InitLogger(cfg.SentryDSN, router)
-		if err != nil {
-			panic(err)
-		}
-
 		RegisterRoutes(baseRouter)
-		auth.AuthModuleInstance.RegisterRoutes(v1Router)
-		cashflow.CashflowModuleInstance.RegisterRoutes(v1Router)
-		statistic.StatisticModuleInstance.RegisterRoutes(v1Router)
+
+		auth.InitModule(DBPool, *cfg, v1Router)
+		cashflow.InitModule(DBPool, *cfg, v1Router)
+		statistic.InitModule(DBPool, *cfg, v1Router)
 
 		return drivers.StartRouteServer(router)
 	}))

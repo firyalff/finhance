@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (cashflowModule CashflowModule) RegisterRoutes(router *gin.RouterGroup) {
+func registerRoutes(router *gin.RouterGroup) {
 	const CASHFLOW_PATH_PREFIX = "/cashflows"
 	cashflowRouteGroup := router.Group(CASHFLOW_PATH_PREFIX)
 
-	cashflowRouteGroup.Use(middlewares.AuthMiddleware([]byte(cashflowModule.serverConfig.JWTSecret)))
+	cashflowRouteGroup.Use(middlewares.AuthMiddleware([]byte(CashflowModuleInstance.serverConfig.JWTSecret)))
 
 	cashflowRouteGroup.GET("", CashflowModuleInstance.listCashflowHandler)
 	cashflowRouteGroup.GET("/:id", CashflowModuleInstance.detailCashflowHandler)
@@ -23,7 +23,7 @@ func (cashflowModule CashflowModule) RegisterRoutes(router *gin.RouterGroup) {
 	const CATEGORY_PATH_PREFIX = "/cashflow-categories"
 	categoryRouteGroup := router.Group(CATEGORY_PATH_PREFIX)
 
-	categoryRouteGroup.Use(middlewares.AuthMiddleware([]byte(cashflowModule.serverConfig.JWTSecret)))
+	categoryRouteGroup.Use(middlewares.AuthMiddleware([]byte(CashflowModuleInstance.serverConfig.JWTSecret)))
 	categoryRouteGroup.POST("", CashflowModuleInstance.createCashflowCategoryHandler)
 	categoryRouteGroup.GET("", CashflowModuleInstance.listCashflowCategoryHandler)
 }
