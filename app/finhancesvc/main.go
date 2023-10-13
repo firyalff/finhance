@@ -9,13 +9,10 @@ import (
 	"finhancesvc/modules/statistic"
 	"os"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mkideal/cli"
 )
 
 const AppVersion = "v0.0.1"
-
-var DBPool *pgxpool.Pool
 
 func main() {
 	os.Exit(cli.Run(new(configs.ServerConfig), func(cliCtx *cli.Context) (err error) {
@@ -30,7 +27,7 @@ func main() {
 			panic(err)
 		}
 
-		DBPool, err = drivers.InitDBPool(ctx, cfg.DBURI)
+		DBPool, err := drivers.InitDBPool(ctx, cfg.DBURI)
 		if err != nil {
 			panic(err)
 		}
@@ -44,7 +41,7 @@ func main() {
 		baseRouter := router.Group("")
 		v1Router := router.Group("/v1")
 
-		RegisterRoutes(baseRouter)
+		registerRoutes(baseRouter)
 
 		auth.InitModule(DBPool, *cfg, v1Router)
 		cashflow.InitModule(DBPool, *cfg, v1Router)
